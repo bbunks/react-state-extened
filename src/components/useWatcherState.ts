@@ -1,8 +1,13 @@
 import { Dispatch, SetStateAction, useMemo, useState } from "react";
 import { Watcher } from "wal.js";
 
-//purpose, duplicate the query strings into the url
-function useWatcherState<T>(watcher: Watcher<T>) {
+/**
+ * A react hook used to convert a Watcher from wal.js to react states.
+ *
+ * @constructor
+ * @param {Watcher} watcher - A watcher that will be written to and read from
+ */
+export function useWatcherState<T>(watcher: Watcher<T>) {
   //exists to force rerender on stateUpdate
   const [stateIndex, updateState] = useState(0);
 
@@ -18,7 +23,7 @@ function useWatcherState<T>(watcher: Watcher<T>) {
     //
     // eslint-disable-next-line @typescript-eslint/ban-ts-comment
     // @ts-ignore
-    let newValue = updateFunction();
+    let newValue = updateFunction(watcher.value);
 
     if (newValue !== watcher.value) {
       watcher.value = newValue;
@@ -35,5 +40,3 @@ function useWatcherState<T>(watcher: Watcher<T>) {
 
   return [state, setState] as [T, Dispatch<SetStateAction<T>>];
 }
-
-export default useWatcherState;

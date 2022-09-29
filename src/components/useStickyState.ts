@@ -9,7 +9,7 @@ import { Dispatch, SetStateAction, useEffect, useState } from "react";
  * @param {any} defaultValue - The default value returned
  * @param {string} key - The key to be written into in local storage
  */
-function useStickyState<T>(defaultValue: T, key: string) {
+export function useStickyState<T>(defaultValue: T, key: string) {
   const [value, setValue] = useState<T>(() => {
     const stickyValue = window.localStorage.getItem(key);
     return stickyValue !== null ? JSON.parse(stickyValue) : defaultValue;
@@ -20,5 +20,3 @@ function useStickyState<T>(defaultValue: T, key: string) {
   }, [key, value]);
   return [value, setValue] as [T, Dispatch<SetStateAction<T>>];
 }
-
-export { useStickyState };

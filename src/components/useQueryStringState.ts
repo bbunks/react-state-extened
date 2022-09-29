@@ -7,7 +7,10 @@ type KeyValuePair = { key: string; value: string | number };
  *
  * @param {function} defaultState - State that will be included unless the a different value is stored in the qs
  */
-function useQueryStringState(defaultState: KeyValuePair[] = [], options = {}) {
+export function useQueryStringState(
+  defaultState: KeyValuePair[] = [],
+  options = {}
+) {
   //exists to force rerender on stateUpdate
   const [stateIndex, updateState] = useState(0);
 
@@ -67,5 +70,3 @@ function useQueryStringState(defaultState: KeyValuePair[] = [], options = {}) {
 
   return [state, setState];
 }
-
-export default useQueryStringState;

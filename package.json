@@ -1,10 +1,7 @@
 {
-  "name": "@bbunks/ui-lib",
-  "publishConfig": {
-    "registry": "https://npm.pkg.github.com/bbunks"
-  },
-  "version": "1.0.0",
-  "description": "A great react lib",
+  "name": "react-state-extened",
+  "version": "1.0.2",
+  "description": "Additional options for storing react state",
   "main": "dist/cjs/index.js",
   "module": "dist/esm/index.js",
   "scripts": {
@@ -12,7 +9,7 @@
   },
   "peerDependencies": {
     "react": "^18.2.0",
-    "wal.js": "1.0.0"
+    "wal.js": "1.0.4"
   },
   "author": "Brenden Bunker",
   "license": "ISC",
