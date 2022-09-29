@@ -1,3 +1,3 @@
-# My UI lib
+# react-state-extended
 
-this is a lib to learn how to make ui libs.... lol
+react-state-extended is a react library that allows you to store your state in different ways.
