@@ -1,6 +1,13 @@
 import { useMemo, useState } from "react";
 
-type KeyValuePair = { key: string; value: string | number };
+type QueryStringObject = { [key: string]: number | string | object };
+type EncodeQueryStringObject = {
+  result: { [key: string]: string };
+  decodeKey: EncodeTypeId[];
+};
+
+type EncodeTypeId = "s" | "n" | "o";
+type EncodeType = "string" | "number" | "object";
 
 /**
  * Saves and reads the state from the URL query string. Returns a list of key value pairs.
@@ -8,7 +15,7 @@ type KeyValuePair = { key: string; value: string | number };
  * @param {function} defaultState - State that will be included unless the a different value is stored in the qs
  */
 export function useQueryStringState(
-  defaultState: KeyValuePair[] = [],
+  defaultState: QueryStringObject = {},
   options = {}
 ) {
   //exists to force rerender on stateUpdate
@@ -17,56 +24,129 @@ export function useQueryStringState(
   function getState() {
     const urlParams = new URLSearchParams(window.location.search.slice(1));
 
-    const mappedKeyValues: KeyValuePair[] = [];
-    const mappedObj: { [key: string]: string | number } = {};
+    const mappedObj: { [key: string]: string } = {};
+    let decodeKey: EncodeTypeId[] = [];
 
     for (const ele of urlParams) {
-      const valueIsNumeric = ele[1].search(/^[0-9]+$/) >= 0;
-
-      mappedKeyValues.push({
-        key: ele[0],
-        value: valueIsNumeric ? Number(ele[1]) : ele[1],
-      });
-      mappedObj[ele[0]] = valueIsNumeric ? Number(ele[1]) : ele[1];
+      if (ele[0] === "QSSDK") {
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+        // @ts-ignore
+        decodeKey = ele[1].split("");
+      } else {
+        mappedObj[ele[0]] = ele[1];
+      }
     }
 
-    const defaultStateToInclude = defaultState.filter(
-      (ele) => !(ele.key in mappedObj)
-    );
+    const storedState = decodeQSObject(mappedObj, decodeKey);
 
-    return [...mappedKeyValues, ...defaultStateToInclude];
-  }
-
-  const state = useMemo(getState, [stateIndex]);
-
-  function setState(
-    update: KeyValuePair[] | ((currentState: KeyValuePair[]) => KeyValuePair[])
-  ) {
-    let updatedList: KeyValuePair[] = [];
-
-    if (typeof update === "function") {
-      updatedList = update(state);
-    } else if (Array.isArray(update)) {
-      updatedList = update;
-    }
-
-    const queryObj: { [key: string]: string } = {};
-
-    updatedList.forEach((ele) => {
-      if (defaultState.find((fele) => ele.key === fele.key) !== ele)
-        queryObj[ele.key] = ele.value.toString();
-    });
-
-    const SearchParams = new URLSearchParams(queryObj).toString();
-    const paramString = SearchParams.length === 0 ? "" : `?${SearchParams}`;
-
-    if (window.location.search !== paramString) {
-      window.history.replaceState(null, "", location.pathname + paramString);
-      updateState((prev) => prev + 1);
-    }
+    return { ...defaultState, ...storedState };
   }
 
   //This makes the state return the same list so that you can use it in useEffects
+  const state = useMemo(getState, [stateIndex]);
+
+  function setState(
+    update:
+      | QueryStringObject
+      | ((currentState: QueryStringObject) => QueryStringObject)
+  ) {
+    let updatedObj: QueryStringObject = {};
+
+    if (typeof update === "function") {
+      updatedObj = update(state);
+    } else if (typeof update === "object") {
+      updatedObj = update;
+    }
+
+    writeToURL(encodeQSObject(updatedObj), () => {
+      updateState((e) => e + 1);
+    });
+  }
 
   return [state, setState];
+}
+
+const typeIds: {
+  string: EncodeTypeId;
+  number: EncodeTypeId;
+  object: EncodeTypeId;
+} = {
+  string: "s",
+  number: "n",
+  object: "o",
+};
+
+function decodeQSItem(value: string, type: EncodeTypeId) {
+  switch (type) {
+    case "s":
+      return value;
+    case "n":
+      return parseFloat(value);
+    case "o":
+      return JSON.parse(value);
+    default:
+      return value;
+  }
+}
+
+function decodeQSObject(
+  obj: { [key: string]: string },
+  decodeKey: EncodeTypeId[] // a list of type ids stored as a string
+): QueryStringObject {
+  const decodedObj: QueryStringObject = {};
+  Object.keys(obj).forEach((key, index) => {
+    const type = decodeKey[index];
+    decodedObj[key] = decodeQSItem(obj[key], type);
+  });
+  return decodedObj;
+}
+
+function encodeQSItem(value: string | number | object): {
+  result: string;
+  decodeTypeId: EncodeTypeId;
+} {
+  switch (typeof value) {
+    case "string":
+      return { result: value, decodeTypeId: "s" };
+    case "number":
+      return { result: value.toString(), decodeTypeId: "n" };
+    case "object":
+      return { result: JSON.stringify(value), decodeTypeId: "o" };
+    default:
+      return { result: JSON.stringify(value), decodeTypeId: "o" };
+  }
+}
+
+function encodeQSObject(obj: QueryStringObject): EncodeQueryStringObject {
+  const result: { [key: string]: string } = {};
+  const decodeKey: EncodeTypeId[] = [];
+
+  Object.keys(obj).forEach((ele) => {
+    const encodedElement = encodeQSItem(obj[ele]);
+    result[ele] = encodedElement.result;
+    decodeKey.push(encodedElement.decodeTypeId);
+  });
+
+  return {
+    result,
+    decodeKey,
+  };
+}
+
+function writeToURL(
+  obj: EncodeQueryStringObject,
+  onSuccess: () => void = () => {}
+) {
+  const queryObj: { [key: string]: string } = {
+    ...obj.result,
+    QSSDK: obj.decodeKey.join(""),
+  };
+
+  const SearchParams = new URLSearchParams(queryObj).toString();
+  const paramString = SearchParams.length === 0 ? "" : `?${SearchParams}`;
+
+  if (window.location.search !== paramString) {
+    window.history.replaceState(null, "", location.pathname + paramString);
+    onSuccess();
+  }
 }

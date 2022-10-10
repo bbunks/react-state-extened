@@ -6,10 +6,10 @@ import { Dispatch, SetStateAction, useEffect, useState } from "react";
  * If it can not find it wil will st the default value to the first param.
  *
  * @constructor
- * @param {any} defaultValue - The default value returned
  * @param {string} key - The key to be written into in local storage
+ * @param {any} defaultValue - The default value returned
  */
-export function useStickyState<T>(defaultValue: T, key: string) {
+export function useStickyState<T>(key: string, defaultValue: T) {
   const [value, setValue] = useState<T>(() => {
     const stickyValue = window.localStorage.getItem(key);
     return stickyValue !== null ? JSON.parse(stickyValue) : defaultValue;
