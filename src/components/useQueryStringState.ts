@@ -7,16 +7,14 @@ type EncodeQueryStringObject = {
 };
 
 type EncodeTypeId = "s" | "n" | "o";
-type EncodeType = "string" | "number" | "object";
 
 /**
  * Saves and reads the state from the URL query string. Returns a list of key value pairs.
  *
- * @param {function} defaultState - State that will be included unless the a different value is stored in the qs
+ * @param {QueryStringObject} defaultState - State that will be included unless the a different value is stored in the qs
  */
-export function useQueryStringState(
-  defaultState: QueryStringObject = {},
-  options = {}
+export function useQueryStringState<T extends QueryStringObject>(
+  defaultState: T
 ) {
   //exists to force rerender on stateUpdate
   const [stateIndex, updateState] = useState(0);
@@ -39,42 +37,40 @@ export function useQueryStringState(
 
     const storedState = decodeQSObject(mappedObj, decodeKey);
 
-    return { ...defaultState, ...storedState };
+    return { ...defaultState, ...storedState } as T;
   }
 
   //This makes the state return the same list so that you can use it in useEffects
   const state = useMemo(getState, [stateIndex]);
 
-  function setState(
-    update:
-      | QueryStringObject
-      | ((currentState: QueryStringObject) => QueryStringObject)
-  ) {
+  function setState(update: T | ((currentState: T) => T)) {
     let updatedObj: QueryStringObject = {};
 
     if (typeof update === "function") {
-      updatedObj = update(state);
+      updatedObj = { ...update(state) };
     } else if (typeof update === "object") {
-      updatedObj = update;
+      updatedObj = { ...update };
     }
 
-    writeToURL(encodeQSObject(updatedObj), () => {
+    const cleanObj: any = {};
+    Object.keys(updatedObj).forEach((name) => {
+      if (
+        !(name in defaultState) ||
+        JSON.stringify(updatedObj[name]) !== JSON.stringify(defaultState[name])
+      )
+        cleanObj[name] = updatedObj[name];
+    });
+
+    writeToURL(encodeQSObject(cleanObj), () => {
       updateState((e) => e + 1);
     });
   }
 
-  return [state, setState];
+  return [state, setState] as [
+    T,
+    (update: T | ((currentState: T) => T)) => void
+  ];
 }
-
-const typeIds: {
-  string: EncodeTypeId;
-  number: EncodeTypeId;
-  object: EncodeTypeId;
-} = {
-  string: "s",
-  number: "n",
-  object: "o",
-};
 
 function decodeQSItem(value: string, type: EncodeTypeId) {
   switch (type) {
@@ -137,13 +133,17 @@ function writeToURL(
   obj: EncodeQueryStringObject,
   onSuccess: () => void = () => {}
 ) {
-  const queryObj: { [key: string]: string } = {
-    ...obj.result,
-    QSSDK: obj.decodeKey.join(""),
-  };
+  let paramString = "";
 
-  const SearchParams = new URLSearchParams(queryObj).toString();
-  const paramString = SearchParams.length === 0 ? "" : `?${SearchParams}`;
+  if (obj.decodeKey.length > 0) {
+    const queryObj: { [key: string]: string } = {
+      ...obj.result,
+      QSSDK: obj.decodeKey.join(""),
+    };
+
+    const SearchParams = new URLSearchParams(queryObj).toString();
+    paramString = SearchParams.length === 0 ? "" : `?${SearchParams}`;
+  }
 
   if (window.location.search !== paramString) {
     window.history.replaceState(null, "", location.pathname + paramString);
