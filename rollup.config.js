@@ -25,7 +25,7 @@ export default [
       commonjs(),
       typescript({ tsconfig: "./tsconfig.json" }),
     ],
-    external: ["react"],
+    external: ["react", "wal.js"],
   },
   {
     input: "dist/esm/index.d.ts",

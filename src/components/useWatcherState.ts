@@ -1,4 +1,4 @@
-import { Dispatch, SetStateAction, useMemo, useState } from "react";
+import { Dispatch, SetStateAction, useEffect, useMemo, useState } from "react";
 import { Watcher } from "wal.js";
 
 /**
@@ -31,12 +31,18 @@ export function useWatcherState<T>(watcher: Watcher<T>) {
   }
 
   //trigger state update when watched value changes
-  watcher.addListener(() => {
-    updateState((prev) => prev + 1);
-  });
+  useEffect(() => {
+    function incrementListener() {
+      updateState((prev) => prev + 1);
+    }
+    watcher.addListener(incrementListener);
+    return () => {
+      watcher.removeListener(incrementListener);
+    };
+  }, []);
 
   //This makes the state return the same list so that you can use it in useEffects
   const state = useMemo(getState, [stateIndex]);
 
-  return [state, setState] as [T, Dispatch<SetStateAction<T>>];
+  return [state, setState] as const;
 }

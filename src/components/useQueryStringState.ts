@@ -20,7 +20,7 @@ export function useQueryStringState<T extends QueryStringObject>(
   const [stateIndex, updateState] = useState(0);
 
   function getState() {
-    const urlParams = new URLSearchParams(window.location.search.slice(1));
+    const urlParams = new URLSearchParams(location.search.slice(1));
 
     const mappedObj: { [key: string]: string } = {};
     let decodeKey: EncodeTypeId[] = [];
